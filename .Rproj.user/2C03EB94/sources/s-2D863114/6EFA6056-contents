@@ -2,3 +2,13 @@ addFirstTwo <- function(x){
   result <- x[1] + x[2]
   return(result)
 }
+
+
+https://github.com/dgcallejon/R-Package.git
+
+git init
+git remote add origin
+https://github.com/dgcallejon/R-Package.git
+git add .
+git commit –m "initial commit"
+git push -u origin master
