@@ -1,0 +1,201 @@
+#exercise - DAY 1
+
+#Select
+#1
+mydata <- fread("transactions.csv")
+
+#2
+mydata[, TransDate:=dmy(TransDate, tz="UTC")]
+mydata[, TransDate:=dmy(TransDate)]
+
+#3
+mydata[PurchAmount > 100 & PurchAmount <200, list(Customer, Cost)]
+
+#Aggregate
+#1
+
+mydata[,sum(PurchAmount), by=c("TransDate","Customer")]
+mydata[,sum(PurchAmount), by=list(TransDate,Customer)]
+mydata[,list(AggPurch=sum(PurchAmount)), by=list(Customer, TransDate)]
+
+#2
+mydata[, list(Count = 1:.N), by=Customer]
+mydata[, list(Count = .N), by=Customer]
+mydata[, Count := 1:.N, by=Customer]
+
+#3
+mydata4 <- mydata[order(TransDate, Customer)]
+mydata4[, LeadQuantity := shift (Quantity,type = "lead"), by=Customer]
+
+#4
+max(mydata4$LeadQuantity, na.rm = TRUE)
+
+#Merge
+#1
+demo = fread("demographics.csv")
+
+#2
+merge(demo, mydata, by="Customer", all.x = TRUE)
+
+#3
+demo[, Birthdate:=dmy(Birthdate, tz="UTC")]
+demo[order(Birthdate)]
+demo <- demo[Birthdate > ymd("1980-01-01"),]
+merge(demo, mydata, by="Customer", all = FALSE)
+merge(mydata, demo[year(Birthdate)>1980], by="Customer")
+
+
+#Conditions
+#2
+mydata[order(TransDate, decreasing = TRUE)]
+x <- mydata[TransDate > ymd("2012-12-01") & TransDate < ymd("2012-12-31")]
+y <- x[,sum(PurchAmount)]
+if (y<30000) {print("10 % Discount on all products during next week")
+} else if (y>30000 & y<45000) {print("free item for every 3 items bought")
+    } else {print("no campaign")}
+
+#Loops
+#2
+mydata2 <- mydata[order(TransDate)]
+mydata2[,CumSum:= cumsum(PurchAmount),]
+
+nrow(mydata2[CumSum < 1000000.00])
+i <- nrow(mydata2[CumSum < 1000000])
+mydata2[i, TransDate]
+
+mydata[, TransDate:=dmy(TransDate)]
+
+spending <- 0
+i <- 0
+while(spending<1000000){
+  i<- i+1
+  spending <- spending + mydata[i, PurchAmount]
+}
+print(mydata[i, TransDate])
+
+for (i in 1:nrow(mydata2)){
+    x <- x + mydata2[i,PurchAmount]
+    if (x>=1000000){
+      print(mydata2[i,TransDate])
+      break
+    }
+}
+
+#functions
+#1
+add <- function(x, y){
+  result <- x / y
+  return(result)
+}
+add(20,4)
+
+#2
+die <- 1:6
+
+dice <- function(){
+  result <- sum(sample(1:6, 2, replace= TRUE))
+  return(result)
+}
+dice ()
+
+dice.roll <- function(px=rep(1/6,6), py=rep(1/6,6)){
+  dice1 <- sample(1:6, 1, prob = px)
+  dice2 <- sample(1:6,1, prob = py)
+  result <- sum(dice1, dice2)
+  return(result)
+}
+
+dice.roll()
+
+#roll this function 10 times
+replicate(10, dice.roll())
+
+
+#Scoring MODEL RFM
+#1
+install.packages("Hmisc")
+library(Hmisc)
+
+trans <- fread("transactions.csv")
+trans <- trans[, TransDate:=dmy(TransDate)]
+
+#2
+#Date of the latest transaction
+now <- max(trans[,TransDate])
+now
+
+#New Data Table "RFM"
+RFM <- trans[, list(recency = as.numeric(now - max(TransDate)),
+                    frequency = .N,
+                    monetary = mean(PurchAmount)),
+                by = Customer]
+
+str(RFM)
+
+#3
+#Calculate rfm scores
+rfm_scores <- RFM[,list(Customer,
+                        recency = as.numeric(cut2(-recency, g=3)),
+                        frequency = as.numeric(cut2(frequency, g=3)),
+                        monetary = as.numeric(cut2(monetary, g=3))
+)]
+
+#4
+#overall rfm scores (unweighted)
+rfm_scores[, Overall := mean(c(recency, frequency, monetary)), by = Customer]
+
+#rfm scores weighted 1
+rfm_scores[, Overall_weighted1 := 0.2*recency+0.6*frequency+0.2*monetary]
+
+#rfm scores weighted 2
+rfm_scores[, Overall_weighted2 := 0.6*recency+0.2*frequency+0.2*monetary]
+
+# Divide all customers in 3 distinct RFM groups by rounding the overall RFM score. ####
+#?round
+rfm_scores[,group:=round(Overall)]
+
+rfm_scores[group==3]
+table(rfm_scores$group)
+
+# 5. The RFM function ####
+RFMfunction <- function(data, weight_recency=1, weight_frequency=1, weight_monetary=1){
+
+  # adjusting values to ensure that the weights add up to one
+  weight_recency2 <- weight_recency/sum(weight_recency, weight_frequency, weight_monetary)
+  weight_frequency2 <- weight_frequency/sum(weight_recency, weight_frequency, weight_monetary)
+  weight_monetary2 <- weight_monetary/sum(weight_recency, weight_frequency, weight_monetary)
+
+  print("weights are calculated")
+
+  # RFM measures
+  max.Date <- max(data[,TransDate])
+
+  temp <- data[,list(
+    recency = as.numeric(max.Date - max(TransDate)),
+    frequency = .N,
+    monetary = mean(PurchAmount)),
+    by=Customer
+  ]
+
+  print("RFM Measure done")
+
+  # RFM scores
+  temp <- temp[,list(Customer,
+                     recency = as.numeric(cut2(-recency, g=3)),
+                     frequency = as.numeric(cut2(frequency, g=3)),
+                     monetary = as.numeric(cut2(monetary, g=3)))]
+
+  # Overall RFM score
+  temp[,finalscore:=weight_recency2*recency+weight_frequency2*frequency+weight_monetary2*monetary]
+
+  print("Overall RFM Measure done")
+
+  # RFM group
+  temp[,group:=round(finalscore)]
+
+  # Return final table
+  return(temp)
+}
+
+RFMfunction(transactions,60,20,20)
+traceback()

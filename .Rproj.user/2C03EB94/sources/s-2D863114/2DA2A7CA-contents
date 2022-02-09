@@ -1,0 +1,129 @@
+install.packages("devtools")
+library(devtools)
+
+#20 use package
+library(data.table)
+library(lubridate)
+library(myRFMpackage)
+transactions <- fread("transactions.csv")
+str(transactions)
+transactions[,TransDate:=dmy(TransDate, tz="UTC")]
+
+temp <- calculateRFM(transactions,20,20,60)
+temp
+
+--------------------------------------------------------------------------
+
+#21 create a help manual
+#' calculateRFM
+#'
+#  Description
+#' This function creates a RFM Model for a given Data
+#'
+#  Detail arguments like a data description
+#' @details
+#' \code{data} Measure the recency, frequency, and monetary value of customer purchases.
+#' Set a score to rank customers according to their purchase recency, frequency, and monetary value.
+#' Calculate the overall RFM score. Analyze RFM group differences.
+#'
+#  Arguments that are passed as input to the function
+#' @param data
+#' @param weight_recency
+#' @param weight_frequency
+#' @param weight_monetary
+#'
+#  Returned values with a description of what the function returns
+#' @return RFM Score table
+#' @examples
+#' calculateRFM(Data, 20, 20, 60)
+#'
+#
+#' @export
+
+
+--------------------------------------------------------------
+
+#23 Denbugging
+
+#1 create a function that adds the first two elements of a vector
+addFirstTwo <- function(x){
+  result <- x[1] + x[2]
+  return(result)
+}
+
+
+
+
+#2 Run the code
+addFirstTwo(c(1, 4, 6))
+
+
+
+addFirstTwo <- function(x){
+  result <- x[1] + x[2]
+  print(class(x))
+}
+
+addFirstTwo(c("Z", 2, 6))
+
+
+
+
+#4 Add Browser
+
+addFirstTwo <- function(vec){
+    browser()
+    result <- vec[1] + vec[2]
+    return(result)
+}
+
+addFirstTwo(c(1, "Z"))
+
+
+
+
+#5 Add Traceback
+
+addFirstTwo <- function(x){
+    result <- x[1] + x[2]
+    return(result)
+}
+
+addFirstTwo(c(1, "Z"))
+
+#always at the end of the code
+traceback()
+
+
+newfunction <- function(){
+    result <- mean(1:10, trim = NA)
+    return(result)
+}
+
+newfunction()
+#always at the end of the code
+traceback()
+
+
+--------------------------------------------
+
+#24 Unit testing
+
+#1 Add function to RFM package
+#New File -> Rscript -> function ->
+
+#2 create a unit test framework
+  usethis::use_testthat()
+
+#3 write a test for AddFirstTwo function
+context("Correct Output")
+
+test_that("adds the first two elements of a vector", {
+  expect_equal(addFirstTwo(c(4,5,6)), 9)
+  expect_equal(addFirstTwo(c(1,2,6)), 3)
+  expect_equal(addFirstTwo(c(3,3)), 6)
+})
+
+#4 run the tests
+
+devtools:::test()

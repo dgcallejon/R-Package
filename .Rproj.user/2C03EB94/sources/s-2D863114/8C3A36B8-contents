@@ -1,0 +1,6 @@
+calculateRFM(transactions,20,20,60)
+addFirstTwo(c(1,2))
+
+addFirstTwo(c(1,2,3))
+
+addFirstTwo(c(1,4,4))
